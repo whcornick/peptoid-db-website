@@ -9,7 +9,7 @@ Flask-GraphQL==2.0.1
 Flask-Moment==1.0.5
 Flask-Admin==1.6.1
 Flask-BasicAuth==0.2.0
-Jinja2==3.1.14
+Jinja2==3.1.4
 Werkzeug==2.2.3
 WTForms==3.1.2
 graphene==2.1.9
