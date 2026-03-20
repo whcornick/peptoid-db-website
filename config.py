@@ -10,5 +10,5 @@ class Config(object):
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PEPTOIDS_PER_PAGE = 6
-    BASIC_AUTH_USERNAME = 'admin'
-    BASIC_AUTH_PASSWORD = 'password'
+    BASIC_AUTH_USERNAME = 'kklab'
+    BASIC_AUTH_PASSWORD = 'peptoids1234!'
