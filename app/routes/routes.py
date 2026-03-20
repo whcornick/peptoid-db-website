@@ -82,7 +82,7 @@ def gallery():
 
     # paginated peptoids
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).paginate(
-        page, app.config['PEPTOIDS_PER_PAGE'], True)
+    page=page, per_page=app.config['PEPTOIDS_PER_PAGE'], error_out=False)
     next_url = url_for(
         'routes.gallery', page=peptoids.next_num, view=view) if peptoids.has_next else None
     prev_url = url_for(
