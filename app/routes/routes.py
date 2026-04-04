@@ -31,11 +31,15 @@ def renderGallery(peptoids, title, page, next_url, prev_url, view, var):
         peptoid_urls.append(url_for('routes.peptoid', code=p.code))
 
         # creating peptoid sequence string according adhering to the max sequence characters (either full sequence or first 3 residues and ...)
-        if len(p.sequence) < sequence_max:
-            peptoid_sequences.append(p.sequence)
+        seq_val = p.sequence or ""
+        if len(seq_val) < sequence_max:
+            peptoid_sequences.append(seq_val)
         else:
-            l = [pos for pos, char in enumerate(p.sequence) if char == ',']
-            peptoid_sequences.append(p.sequence[:l[2]] + " ...")
+            i = [pos for pos, char in enumerate(seq_val) if char == ',']
+            if len(i) > 2:
+                peptoid_sequences.append(seq_val[:i[2]] + " ...")
+            else:
+                peptoid_sequences.append(seq_val[:sequence_max] + " ...")
 
         # if structure doi exists add doi links for structure doi and pub doi, else use empty string for struct doi link
         if p.struct_doi:
