@@ -1,21 +1,29 @@
-# imports forms modules from flask wtf
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, RadioField
-from wtforms.validators import DataRequired, InputRequired
-
-# making form for searching data bank with radiofield for selecting search option and string
-# field for input
 
 
 class SearchForm(FlaskForm):
-    option = RadioField('Select an option for searching the peptoid data bank',
-                        validators=[InputRequired()],
-                        choices=[
-                            ('residue', 'Search by a residue'),
-                            ('author', 'Search by an author'),
-                            ('topology', 'Search by a topology type'),
-                            ('experiment', 'Search by an experimental technique'),
-                            ('doi', "Search by DOI")
-                        ])
-    search = StringField('Enter a search term', validators=[DataRequired()])
-    submit = SubmitField('Go')
+    residue = StringField(
+        'Residue',
+        render_kw={"placeholder": "(S)-N-(1-cyclohexylethyl)glycine or Nsch"}
+    )
+    author = StringField(
+        'Author',
+        render_kw={"placeholder": "Kirshenbaum, Kent"}
+    )
+    doi = StringField(
+        'DOI',
+        render_kw={"placeholder": "10.1002/ejoc.202001401"}
+    )
+    topology = RadioField(
+        'Topology',
+        choices=[('A', 'Linear'), ('C', 'Cyclic'), ('M', 'Multicyclic')]
+    )
+    experiment = RadioField(
+        'Experimental Technique',
+        choices=[
+            ('X-Ray Diffraction', 'X-Ray Diffraction'),
+            ('Solution NMR', 'Solution NMR')
+        ]
+    )
+    submit = SubmitField('Submit')
