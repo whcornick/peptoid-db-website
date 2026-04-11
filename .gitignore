@@ -4,3 +4,12 @@
 venv/
 *.db
 *.backup
+# database
+app.db
+
+# generated images
+app/static/peptoids/
+
+# backups
+*.bak
+*_backup_*

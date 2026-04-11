@@ -65,8 +65,9 @@ block styles %} {{super()}}
           />
           {% elif view == '2d' %}
           <img
-            src="{{url_for('static', filename='peptoids/'+peptoid_codes[i]+'_2d'+'.png')}}"
-          />
+            src="{{ url_for('static', filename='peptoids/' + peptoid_codes[i] + '_2d.png') }}"
+	    onerror="this.onerror=null; this.src='{{ url_for('static', filename='peptoids/' + peptoid_codes[i][:5] + '_2d.png') }}';"
+	  />
           {% endif %}
           <div class="mask">
             <h3>{{ peptoid_titles[i] }}</h3>
