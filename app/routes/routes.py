@@ -112,18 +112,17 @@ def residues():
 def search():
     form = SearchForm()
 
-    if form.is_submitted():
-        searched = {}
+    if request.method == 'POST':
+        filters = {}
 
-        for key in ['residue', 'author', 'doi', 'topology', 'experiment']:
-            value = form.data.get(key)
+        for key in ['residue', 'author', 'doi', 'experiment', 'topology']:
+            value = getattr(form, key).data
             if value:
-                if isinstance(value, str):
-                    value = value.strip()
+                value = value.strip() if isinstance(value, str) else value
                 if value:
-                    searched[key] = value
+                    filters[key] = value
 
-        if not searched:
+        if not filters:
             flash('Please enter at least one search value.', 'warning')
             return render_template(
                 'search.html',
@@ -133,24 +132,11 @@ def search():
                 description='Peptoid Data Bank - Explore by property'
             )
 
-        if len(searched) == 1:
-            key, value = next(iter(searched.items()))
-            if key == 'topology':
-                return redirect(url_for('routes.topology', var=value))
-            if key == 'experiment':
-                return redirect(url_for('routes.experiment', var=value))
+        for key, value in list(filters.items()):
             if key == 'doi':
-                return redirect(url_for('routes.doi', var=value.replace('/', '$')))
-            return redirect(url_for(f'routes.{key}', var=value))
+                filters[key] = value.replace('/', '$')
 
-        query_args = {}
-        for key, value in searched.items():
-            if key == 'doi':
-                query_args[key] = value.replace('/', '$')
-            else:
-                query_args[key] = value
-
-        return redirect(url_for('routes.multisearch', **query_args))
+        return redirect(url_for('routes.multisearch', **filters))
 
     return render_template(
         'search.html',
@@ -160,88 +146,120 @@ def search():
         description='Peptoid Data Bank - Explore by property'
     )
 
+
 @bp.route('/multisearch')
 def multisearch():
     page = request.args.get('page', 1, type=int)
     view = request.args.get('view', '2d', type=str)
 
-    searched = {}
-    for key in ['residue', 'author', 'doi', 'topology', 'experiment']:
+    filters = {}
+    for key in ['residue', 'author', 'doi', 'experiment', 'topology']:
         value = request.args.get(key, type=str)
         if value:
-            searched[key] = value
+            filters[key] = value
 
-    if not searched:
+    if not filters:
         flash('No search filters were provided.', 'warning')
         return redirect(url_for('routes.search'))
 
-    codes = []
+    matching_codes = []
 
     for p in Peptoid.query.all():
         match = True
 
-        residue_short = [r.short_name.lower() for r in p.peptoid_residue]
-        residue_long = [r.long_name.lower() for r in p.peptoid_residue]
-        author_first = [a.first_name.lower() for a in p.peptoid_author]
-        author_last = [a.last_name.lower() for a in p.peptoid_author]
-        author_full = [f"{a.first_name} {a.last_name}".lower() for a in p.peptoid_author]
+        for key, raw_value in filters.items():
+            value = raw_value.replace('$', '/').strip().lower()
 
-        pep_data = {
-            'residue': (residue_short, residue_long),
-            'author': (author_first, author_last, author_full),
-            'topology': (p.topology or '').lower(),
-            'doi': ((p.pub_doi or '').lower(), (p.struct_doi or '').lower()),
-            'experiment': (p.experiment or '').lower(),
-        }
+            if key == 'residue':
+                residue_values = []
+                for r in p.peptoid_residue:
+                    residue_values.append((r.short_name or '').lower())
+                    residue_values.append((r.long_name or '').lower())
 
-        for prop, raw_value in searched.items():
-            value = raw_value.replace('$', '/').lower()
-
-            if prop == 'residue':
-                if value not in pep_data['residue'][0] and value not in pep_data['residue'][1]:
+                if not any(value in item for item in residue_values):
                     match = False
                     break
-            elif prop == 'author':
-                if (
-                    value not in pep_data['author'][0]
-                    and value not in pep_data['author'][1]
-                    and value not in pep_data['author'][2]
-                ):
+
+            elif key == 'author':
+                author_values = []
+                for a in p.peptoid_author:
+                    first = (a.first_name or '').lower()
+                    last = (a.last_name or '').lower()
+                    author_values.extend([
+                        first,
+                        last,
+                        f"{first} {last}".strip(),
+                        f"{last}, {first}".strip()
+                    ])
+
+                if not any(value in item for item in author_values):
                     match = False
                     break
-            elif prop == 'doi':
-                if value not in pep_data['doi'][0] and value not in pep_data['doi'][1]:
+
+            elif key == 'doi':
+                doi_values = [
+                    (p.struct_doi or '').lower(),
+                    (p.pub_doi or '').lower()
+                ]
+
+                if not any(value in item for item in doi_values):
                     match = False
                     break
-            else:
-                if value not in pep_data[prop]:
+
+            elif key == 'experiment':
+                if value != (p.experiment or '').lower():
+                    match = False
+                    break
+
+            elif key == 'topology':
+                if value != (p.topology or '').lower():
                     match = False
                     break
 
         if match:
-            codes.append(p.code)
+            matching_codes.append(p.code)
 
-    peptoids = Peptoid.query.filter(Peptoid.code.in_(codes)).order_by(
+    peptoids = Peptoid.query.filter(Peptoid.code.in_(matching_codes)).order_by(
         Peptoid.release.desc()
-    ).paginate(page=page, per_page=app.config['PEPTOIDS_PER_PAGE'], error_out=False)
+    ).paginate(
+        page=page,
+        per_page=app.config['PEPTOIDS_PER_PAGE'],
+        error_out=False
+    )
 
     next_url = url_for(
         'routes.multisearch',
         page=peptoids.next_num,
         view=view,
-        **searched
+        **filters
     ) if peptoids.has_next else None
 
     prev_url = url_for(
         'routes.multisearch',
         page=peptoids.prev_num,
         view=view,
-        **searched
+        **filters
     ) if peptoids.has_prev else None
 
-    title = 'Multisearch'
-    return renderGallery(peptoids, title, page, next_url, prev_url, view, searched)
+    labels = {
+        'residue': 'Residue',
+        'author': 'Author',
+        'doi': 'DOI',
+        'experiment': 'Experiment',
+        'topology': 'Topology'
+    }
 
+    display_filters = []
+    for key, value in filters.items():
+        shown_value = value.replace('$', '/')
+        display_filters.append(f"{labels.get(key, key.title())}: {shown_value}")
+
+    title = 'Search Results: ' + ', '.join(display_filters)
+
+    return renderGallery(peptoids, title, page, next_url, prev_url, view, filters)
+
+
+# individual peptoid page for peptoid specified by code
 
 # individual peptoid page for peptoid specified by code
 
@@ -372,7 +390,7 @@ def experiment(var):
     view = request.args.get('view', '2d', type=str)
     title = 'Filtered by Experiment: ' + var
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).filter_by(
-        experiment=var).paginate(page=page, per_page=app.config['PEPTOIDS_PER_PAGE'], error_out=False)
+        experiment=var).paginate(page, app.config['PEPTOIDS_PER_PAGE'], True)
     if len(peptoids.items) == 0:
         abort(404)
     next_url = url_for('routes.experiment', page=peptoids.next_num,
@@ -391,7 +409,7 @@ def doi(var):
     view = request.args.get('view', '2d', type=str)
     title = 'Filtered by DOI: ' + var
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).filter(
-        (Peptoid.struct_doi == var) | (Peptoid.pub_doi == var)).paginate(page=page, per_page=app.config['PEPTOIDS_PER_PAGE'], error_out=False)
+        (Peptoid.struct_doi == var) | (Peptoid.pub_doi == var)).paginate(page, app.config['PEPTOIDS_PER_PAGE'], True)
     if len(peptoids.items) == 0:
         abort(404)
     var = var.replace('/', '$') #making doi fit url
@@ -410,7 +428,7 @@ def topology(var):
     view = request.args.get('view', '2d', type=str)
     title = 'Filtered by Topology: ' + var
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).filter_by(
-        topology=var).paginate(page=page, per_page=app.config['PEPTOIDS_PER_PAGE'], error_out=False)
+        topology=var).paginate(page, app.config['PEPTOIDS_PER_PAGE'], True)
     if len(peptoids.items) == 0:
         abort(404)
     next_url = url_for('routes.topology', page=peptoids.next_num,
