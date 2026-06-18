@@ -42,6 +42,7 @@ class Peptoid(db.Model):
     c_term = db.Column(db.String(32), unique=False)
     cyclization_points = db.Column(db.String(8), unique=False)
     struct_smiles = db.Column(db.String(128),unique=False)
+    refcode = db.Column(db.String(6), unique=False)
 
     peptoid_author = db.relationship('Author', secondary=peptoid_author, lazy='dynamic',
                                      backref=db.backref('peptoids', order_by='Peptoid.release.desc()'))

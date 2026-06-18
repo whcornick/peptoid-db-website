@@ -39,6 +39,7 @@ def upgrade():
     sa.Column('c_term', sa.String(length=32), nullable=True),
     sa.Column('cyclization_points', sa.String(length=8), nullable=True),
     sa.Column('struct_smiles', sa.String(length=128), nullable=True),
+    sa.Column('refcode', sa.String(length=6), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('code')
     )
