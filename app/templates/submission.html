@@ -9,6 +9,12 @@
   </p>
 </div>
 
+{% if submission.status == 'rejected' %}
+<div class="alert alert-danger">
+  <strong>Rejection reason:</strong> {{ submission.rejection_reason }}
+</div>
+{% endif %}
+
 <dl class="dl-horizontal">
   <dt>Proposed code</dt><dd>{{ submission.proposed_code or "Pending assignment" }}</dd>
   <dt>Title</dt><dd>{{ submission.title }}</dd>
