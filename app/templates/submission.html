@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="page-header">
+  <h1>Submission #{{ submission.id }}</h1>
+  <p>
+    Status:
+    <span class="label label-default">{{ submission.status|capitalize }}</span>
+  </p>
+</div>
+
+<dl class="dl-horizontal">
+  <dt>Proposed code</dt><dd>{{ submission.proposed_code or "Pending assignment" }}</dd>
+  <dt>Title</dt><dd>{{ submission.title }}</dd>
+  <dt>Release date</dt><dd>{{ submission.release.strftime('%Y-%m-%d') }}</dd>
+  <dt>Experiment</dt><dd>{{ submission.experiment }}</dd>
+  <dt>Authors</dt><dd style="white-space:pre-line;">{{ submission.authors }}</dd>
+  <dt>Input type</dt><dd>{{ submission.input_type }}</dd>
+  <dt>Topology</dt><dd>{{ submission.topology }}</dd>
+  <dt>Cleaned SMILES</dt><dd style="overflow-wrap:anywhere;">{{ submission.cleaned_smiles }}</dd>
+</dl>
+
+<h2>Complete structure</h2>
+<img class="img-responsive"
+     src="{{ url_for('routes.submission_image', submission_id=submission.id, kind='structure') }}"
+     alt="Generated peptoid structure">
+
+<h2>Detected residues</h2>
+<table class="table table-striped">
+  <thead>
+    <tr><th>Number</th><th>Backbone</th><th>Residue SMILES</th></tr>
+  </thead>
+  <tbody>
+    {% for residue in residues %}
+    <tr>
+      <td>{{ residue.index }}</td>
+      <td>{{ residue.backbone_type }}</td>
+      <td>{{ residue.residue_smiles }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<img class="img-responsive"
+     src="{{ url_for('routes.submission_image', submission_id=submission.id, kind='residues') }}"
+     alt="Generated residue grid">
+
+{% if submission.status == 'draft' %}
+<hr>
+<form method="post" action="{{ url_for('routes.submit_submission', submission_id=submission.id) }}">
+  {{ submit_form.hidden_tag() }}
+  {{ submit_form.submit(class="btn btn-success btn-lg") }}
+</form>
+{% endif %}
+
+<p style="margin-top:20px;">
+  <a href="{{ url_for('routes.contribute') }}">Back to My submissions</a>
+</p>
+{% endblock %}

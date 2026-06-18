@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 from app.chemistry.processor import process_structure
 
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
-from flask import render_template, redirect, url_for, abort, flash, make_response
+from flask import render_template, redirect, url_for, abort, flash, make_response, send_file
 from flask_login import current_user, login_user, logout_user, login_required
 from app.routes.forms import SearchForm, ImportPeptoidForm, ContributorLoginForm, SubmitSubmissionForm
 from app.models import Peptoid, Author, Residue, Contributor, Submission
@@ -455,7 +455,54 @@ def api():
 
 @bp.route('/contribute')
 def contribute():
-    return render_template('contribute.html', title='Contribute')
+    submissions = []
+    if current_user.is_authenticated:
+        submissions = Submission.query.filter_by(
+            contributor_id=current_user.id
+        ).order_by(Submission.updated_at.desc()).all()
+
+    return render_template(
+        'contribute.html',
+        title='Contribute',
+        submissions=submissions,
+    )
+
+
+@bp.route('/submission/<int:submission_id>')
+@login_required
+def view_submission(submission_id):
+    submission = Submission.query.filter_by(
+        id=submission_id,
+        contributor_id=current_user.id,
+    ).first_or_404()
+
+    return render_template(
+        'submission.html',
+        title='Submission {}'.format(submission.id),
+        submission=submission,
+        residues=json.loads(submission.residue_data_json),
+        submit_form=SubmitSubmissionForm(),
+    )
+
+
+@bp.route('/submission/<int:submission_id>/image/<kind>')
+@login_required
+def submission_image(submission_id, kind):
+    submission = Submission.query.filter_by(
+        id=submission_id,
+        contributor_id=current_user.id,
+    ).first_or_404()
+
+    paths = {
+        'structure': submission.structure_image_path,
+        'residues': submission.residue_image_path,
+    }
+    path = paths.get(kind)
+
+    if not path or not os.path.isfile(path):
+        abort(404)
+
+    return send_file(path, mimetype='image/png')
 
 
 @bp.route('/contributor-login', methods=['GET', 'POST'])
