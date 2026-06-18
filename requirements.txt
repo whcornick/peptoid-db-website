@@ -20,3 +20,5 @@ termcolor==2.4.0
 MarkupSafe==2.1.5
 itsdangerous==2.1.2
 click==8.1.7
+rdkit==2026.3.3
+gemmi==0.7.5
