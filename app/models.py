@@ -173,7 +173,7 @@ class Submission(db.Model):
     input_type = db.Column(db.String(16), nullable=False)
     original_smiles = db.Column(db.Text, nullable=True)
     cleaned_smiles = db.Column(db.Text, nullable=False)
-    topology = db.Column(db.String(1), nullable=False)
+    topology = db.Column(db.String(20), nullable=False)
     sequence = db.Column(db.String(1024), nullable=True)
     residue_data_json = db.Column(db.Text, nullable=False)
     warnings_json = db.Column(db.Text, nullable=True)
