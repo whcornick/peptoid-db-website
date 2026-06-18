@@ -3,7 +3,7 @@
 {% block app_content %}
 {% if current_user.is_authenticated %}
 <div class="page-header">
-  <h1>Welcome, Contributor!</h1>
+  <h1>Welcome, {{ current_user.username }}!</h1>
   <p>Submit a peptoid entry for review by the Kirshenbaum lab at NYU.</p>
 </div>
 
