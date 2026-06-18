@@ -12,6 +12,7 @@ from flask_moment import Moment
 from flask_admin import Admin, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from flask_basicauth import BasicAuth
+from flask_login import LoginManager
 
 #instantiating app, database, config, limiter, bootstrap, moment, and basic_auth
 app = Flask(__name__)
@@ -22,6 +23,9 @@ bootstrap = Bootstrap(app)
 limiter = Limiter(key_func=get_remote_address, app=app)
 moment = Moment(app)
 basic_auth = BasicAuth(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'routes.contributor_login'
+login_manager.login_message_category = 'info'
 
 #setting up admin
 from app.admin import admin
@@ -38,6 +42,10 @@ app.register_blueprint(routes_bp)
 
 #importing models from app module
 from app import models
+
+@login_manager.user_loader
+def load_contributor(contributor_id):
+    return db.session.get(models.Contributor, int(contributor_id))
 from .schema import schema
 
 class myGraphQLView(GraphQLView):

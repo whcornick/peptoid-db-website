@@ -4,6 +4,8 @@ from app import db
 import datetime
 from flask import url_for
 from sqlalchemy import event
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # peptoid-author helper table
 peptoid_author = db.Table('peptoid-author',
@@ -118,3 +120,27 @@ class Residue(db.Model):
 
     def __repr__(self):
         return '<Residue {}>'.format(self.long_name)
+
+
+class Contributor(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    institution = db.Column(db.String(255), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.datetime.utcnow
+    )
+    last_login = db.Column(db.DateTime, nullable=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return '<Contributor {}>'.format(self.username)
