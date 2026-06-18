@@ -36,7 +36,7 @@ class MyAdminIndexView(AdminIndexView):
         return redirect(basic_auth.challenge())
         
 #Creates Admin with custom index view and adds model views for database models
-admin = Admin(app, name='PeptoidDB Admin', template_mode='bootstrap4',index_view=MyAdminIndexView())
+admin = Admin(app, name='PeptoidDB Admin', template_mode='bootstrap4',index_view=MyAdminIndexView(template='admin/home.html'))
 admin.add_view(ModelView(Peptoid, db.session))
 admin.add_view(ModelView(Residue, db.session))
 admin.add_view(ModelView(Author, db.session))

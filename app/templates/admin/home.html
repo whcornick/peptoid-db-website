@@ -1,0 +1,17 @@
+{% extends 'admin/index.html' %}
+
+{% block body %}
+{{ super() }}
+
+<div class="card mt-4">
+  <div class="card-body">
+    <h4 class="card-title">Update:</h4>
+    <p>
+      Admins can manage public records, images, contributor accounts, and submitted entries.
+      To review a contribution, open <strong>Submissions</strong>, select
+      <strong>Review</strong>, check the metadata and generated structure, then approve it
+      for publication or reject it with a reason.
+    </p>
+  </div>
+</div>
+{% endblock %}
