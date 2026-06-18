@@ -1,0 +1,65 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<h1>Review submission #{{ submission.id }}</h1>
+<p><a href="{{ url_for('.index_view') }}">Back to submissions</a></p>
+
+<table class="table table-bordered">
+  <tr><th>Status</th><td>{{ submission.status|capitalize }}</td></tr>
+  <tr><th>Contributor</th><td>{{ submission.contributor.username }} — {{ submission.contributor.institution }}</td></tr>
+  <tr><th>Proposed code</th><td>{{ submission.proposed_code or 'Pending assignment' }}</td></tr>
+  <tr><th>Title</th><td>{{ submission.title }}</td></tr>
+  <tr><th>Release</th><td>{{ submission.release.strftime('%Y-%m-%d') }}</td></tr>
+  <tr><th>Experiment</th><td>{{ submission.experiment }}</td></tr>
+  <tr><th>Authors</th><td style="white-space:pre-line;">{{ submission.authors }}</td></tr>
+  <tr><th>Publication DOI</th><td>{{ submission.pub_doi or '' }}</td></tr>
+  <tr><th>Structure DOI</th><td>{{ submission.struct_doi or '' }}</td></tr>
+  <tr><th>Citation</th><td>{{ submission.citation or '' }}</td></tr>
+  <tr><th>Input type</th><td>{{ submission.input_type }}</td></tr>
+  <tr><th>Topology</th><td>{{ submission.topology }}</td></tr>
+  <tr><th>Cleaned SMILES</th><td style="overflow-wrap:anywhere;">{{ submission.cleaned_smiles }}</td></tr>
+</table>
+
+<h2>Complete structure</h2>
+<img class="img-fluid"
+     src="{{ url_for('.review_image', submission_id=submission.id, kind='structure') }}"
+     alt="Generated structure">
+
+<h2>Detected residues</h2>
+<table class="table table-striped">
+  <thead><tr><th>Number</th><th>Backbone</th><th>Residue SMILES</th></tr></thead>
+  <tbody>
+    {% for residue in residues %}
+    <tr>
+      <td>{{ residue.index }}</td>
+      <td>{{ residue.backbone_type }}</td>
+      <td>{{ residue.residue_smiles }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<img class="img-fluid"
+     src="{{ url_for('.review_image', submission_id=submission.id, kind='residues') }}"
+     alt="Generated residue grid">
+
+{% if submission.status == 'pending' %}
+<hr>
+<h2>Review decision</h2>
+<div class="alert alert-info">
+  Approval will be enabled after safe database and image finalization is implemented.
+</div>
+<form method="post" action="{{ url_for('.reject_view', submission_id=submission.id) }}">
+  {{ reject_form.hidden_tag() }}
+  <div class="form-group">
+    {{ reject_form.reason.label }}
+    {{ reject_form.reason(class="form-control", rows=4) }}
+  </div>
+  {{ reject_form.submit(class="btn btn-danger") }}
+</form>
+{% elif submission.status == 'rejected' %}
+<div class="alert alert-danger">
+  <strong>Rejection reason:</strong> {{ submission.rejection_reason }}
+</div>
+{% endif %}
+{% endblock %}

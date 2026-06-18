@@ -1,12 +1,17 @@
-from flask_admin import Admin, AdminIndexView
+from flask_admin import Admin, AdminIndexView, expose
 from flask_admin.contrib.sqla import ModelView
 from app.models import Peptoid, Author, Residue, Contributor, Submission
 from app import app, db, basic_auth
 from flask_admin.contrib.fileadmin import FileAdmin
 import os.path as op
-from flask import redirect, Response
+from flask import redirect, Response, abort, send_file, flash, url_for
 from werkzeug.exceptions import HTTPException
-from wtforms import PasswordField
+from wtforms import PasswordField, TextAreaField, SubmitField
+from flask_wtf import FlaskForm
+from wtforms.validators import DataRequired
+from markupsafe import Markup
+import json
+import os
 from wtforms.validators import ValidationError
 
 #class used to force admin to enter credentials
@@ -61,7 +66,19 @@ class ContributorAdmin(ModelView):
 admin.add_view(ContributorAdmin(Contributor, db.session))
 
 
+class RejectSubmissionForm(FlaskForm):
+    reason = TextAreaField('Rejection reason', validators=[DataRequired()])
+    submit = SubmitField('Reject submission')
+
+
 class SubmissionAdmin(ModelView):
+    def is_accessible(self):
+        if not basic_auth.authenticate():
+            raise AuthException('Not authenticated.')
+        return True
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(basic_auth.challenge())
     can_create = False
     can_delete = False
     can_view_details = True
@@ -76,6 +93,13 @@ class SubmissionAdmin(ModelView):
         'pub_doi', 'struct_doi'
     )
     column_default_sort = ('updated_at', True)
+    column_formatters = {
+        'id': lambda view, context, model, name: Markup(
+            '<a href="{}">Review #{}</a>'.format(
+                url_for('.review_view', submission_id=model.id), model.id
+            )
+        )
+    }
 
     column_details_list = (
         'id', 'contributor', 'status', 'created_at', 'updated_at',
@@ -91,6 +115,48 @@ class SubmissionAdmin(ModelView):
         'pub_doi', 'struct_doi', 'citation', 'authors',
         'sequence', 'rejection_reason'
     )
+
+    @expose('/review/<int:submission_id>')
+    def review_view(self, submission_id):
+        submission = db.session.get(Submission, submission_id)
+        if submission is None:
+            abort(404)
+        return self.render(
+            'admin/submission_review.html',
+            submission=submission,
+            residues=json.loads(submission.residue_data_json),
+            reject_form=RejectSubmissionForm(),
+        )
+
+    @expose('/review/<int:submission_id>/image/<kind>')
+    def review_image(self, submission_id, kind):
+        submission = db.session.get(Submission, submission_id)
+        if submission is None:
+            abort(404)
+        path = {
+            'structure': submission.structure_image_path,
+            'residues': submission.residue_image_path,
+        }.get(kind)
+        if not path or not os.path.isfile(path):
+            abort(404)
+        return send_file(path, mimetype='image/png')
+
+    @expose('/review/<int:submission_id>/reject', methods=['POST'])
+    def reject_view(self, submission_id):
+        submission = db.session.get(Submission, submission_id)
+        if submission is None:
+            abort(404)
+        form = RejectSubmissionForm()
+        if not form.validate_on_submit():
+            abort(400)
+        if submission.status != 'pending':
+            flash('Only pending submissions may be rejected.', 'warning')
+            return redirect(url_for('.review_view', submission_id=submission.id))
+        submission.status = 'rejected'
+        submission.rejection_reason = form.reason.data.strip()
+        db.session.commit()
+        flash('Submission rejected.', 'success')
+        return redirect(url_for('.review_view', submission_id=submission.id))
 
 admin.add_view(
     SubmissionAdmin(Submission, db.session, name='Submissions')
