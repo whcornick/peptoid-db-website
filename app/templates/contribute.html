@@ -3,7 +3,7 @@
 {% block app_content %}
 {% if current_user.is_authenticated %}
 <div class="page-header">
-  <h1>Welcome, {{ current_user.first_name }}!</h1>
+  <h1>Welcome, Contributor!</h1>
   <p>Submit a peptoid entry for review by the Kirshenbaum lab at NYU.</p>
 </div>
 
@@ -13,6 +13,17 @@
   <li>Review the automatically generated structure and residue preview.</li>
   <li>Submit the entry!</li>
 </ol>
+
+<div class="panel panel-default">
+  <div class="panel-heading"><strong>Example entry</strong></div>
+  <div class="panel-body">
+    <p><strong>Title:</strong> Example Linear Peptoid</p>
+    <p><strong>Release date:</strong> 2026-06-18</p>
+    <p><strong>Experimental technique:</strong> Solution NMR</p>
+    <p><strong>Authors:</strong> Jane, Doe</p>
+    <p><strong>SMILES:</strong> CNCC(=O)O</p>
+  </div>
+</div>
 
 {% else %}
 <div class="page-header">
