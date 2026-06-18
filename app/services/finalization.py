@@ -8,6 +8,7 @@ from rdkit import Chem
 
 from app import app, db
 from app.models import Author, Peptoid, Residue
+from app.services.code_generation import CODE_PATTERN
 
 
 class FinalizationError(Exception):
@@ -103,16 +104,6 @@ def finalize_submission(submission):
             'Only pending submissions may be approved.'
         )
 
-    code = (submission.proposed_code or '').strip()
-    if not code:
-        raise FinalizationError('A finalized code is required.')
-    if len(code) > 16:
-        raise FinalizationError('The peptoid code is too long.')
-    if Peptoid.query.filter_by(code=code).first():
-        raise FinalizationError(
-            'Peptoid code {} already exists.'.format(code)
-        )
-
     required = {
         'title': submission.title,
         'release': submission.release,
@@ -135,6 +126,28 @@ def finalize_submission(submission):
     residue_data = json.loads(submission.residue_data_json)
     if not residue_data:
         raise FinalizationError('No residues were detected.')
+
+    code = (submission.proposed_code or '').strip()
+    match = CODE_PATTERN.fullmatch(code)
+    if not match:
+        raise FinalizationError(
+            'The submission does not have a valid reserved database code.'
+        )
+
+    code_parts = match.groupdict()
+    if int(code_parts['length']) != len(residue_data):
+        raise FinalizationError(
+            'The reserved code does not match the detected residue count.'
+        )
+    if code_parts['topology'] != _topology_code(submission.topology):
+        raise FinalizationError(
+            'The reserved code does not match the detected topology.'
+        )
+
+    if Peptoid.query.filter_by(code=code).first():
+        raise FinalizationError(
+            'Generated peptoid code {} already exists.'.format(code)
+        )
 
     existing_residues = {}
     for residue in Residue.query.all():

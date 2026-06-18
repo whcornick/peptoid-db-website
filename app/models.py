@@ -148,6 +148,13 @@ class Contributor(UserMixin, db.Model):
 
 
 class Submission(db.Model):
+    __table_args__ = (
+        db.Index(
+            'uq_submission_proposed_code',
+            'proposed_code',
+            unique=True,
+        ),
+    )
     id = db.Column(db.Integer, primary_key=True)
     contributor_id = db.Column(
         db.Integer, db.ForeignKey('contributor.id'), nullable=False, index=True

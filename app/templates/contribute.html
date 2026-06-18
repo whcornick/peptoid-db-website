@@ -41,7 +41,7 @@
     <thead>
       <tr>
         <th>Submission</th>
-        <th>Proposed code</th>
+        <th>Database code</th>
         <th>Title</th>
         <th>Status</th>
         <th>Updated</th>
@@ -51,7 +51,7 @@
       {% for submission in submissions %}
       <tr>
         <td><a href="{{ url_for('routes.view_submission', submission_id=submission.id) }}">#{{ submission.id }}</a></td>
-        <td>{{ submission.proposed_code or 'Pending assignment' }}</td>
+        <td>{{ submission.finalized_code or submission.proposed_code or 'Assigned automatically when submitted for review' }}</td>
         <td>{{ submission.title }}</td>
         <td><span class="label label-default">{{ submission.status|capitalize }}</span></td>
         <td>{{ submission.updated_at.strftime('%Y-%m-%d') }}</td>

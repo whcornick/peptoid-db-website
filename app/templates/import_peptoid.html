@@ -3,13 +3,13 @@
 {% block app_content %}
 <div class="page-header">
   <h1>Import Peptoid</h1>
-  <p>Enter basic metadata and provide either a CIF file or a full-structure SMILES string.</p>
+  <p>Enter publication metadata and provide either a CIF file or a full-structure SMILES string. The database code will be assigned automatically when the entry is submitted for review.</p>
 </div>
 
 <form method="post" enctype="multipart/form-data">
   {{ form.hidden_tag() }}
 
-  {% for field in [form.code, form.title, form.release, form.experiment,
+  {% for field in [form.title, form.release, form.experiment,
                    form.pub_doi, form.struct_doi, form.citation,
                    form.authors, form.smiles, form.cif_file] %}
     <div class="form-group">

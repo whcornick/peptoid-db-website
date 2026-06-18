@@ -5,7 +5,13 @@ import base64
 import json
 
 from werkzeug.utils import secure_filename
+from sqlalchemy import text as sql_text
+from sqlalchemy.exc import IntegrityError, OperationalError
 from app.chemistry.processor import process_structure
+from app.services.code_generation import (
+    CodeGenerationError,
+    generate_peptoid_code,
+)
 
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
 from flask import render_template, redirect, url_for, abort, flash, make_response, send_file
@@ -569,7 +575,7 @@ def import_peptoid():
             submission = Submission(
                 contributor_id=current_user.id,
                 status='draft',
-                proposed_code=form.code.data.strip(),
+                proposed_code=None,
                 title=form.title.data.strip(),
                 release=release_datetime,
                 experiment=form.experiment.data,
@@ -645,19 +651,59 @@ def import_peptoid():
 @login_required
 def submit_submission(submission_id):
     form = SubmitSubmissionForm()
-    submission = Submission.query.filter_by(
-        id=submission_id,
-        contributor_id=current_user.id,
-    ).first_or_404()
 
     if not form.validate_on_submit():
         abort(400)
 
-    if submission.status != 'draft':
-        flash('This submission is no longer a draft.', 'warning')
-        return redirect(url_for('routes.contribute'))
+    try:
+        # Acquire SQLite's write lock before reading existing reservations.
+        # Concurrent submissions therefore choose their codes one at a time.
+        db.session.rollback()
+        db.session.execute(sql_text('BEGIN IMMEDIATE'))
 
-    submission.status = 'pending'
-    db.session.commit()
+        submission = Submission.query.filter_by(
+            id=submission_id,
+            contributor_id=current_user.id,
+        ).first_or_404()
+
+        if submission.status != 'draft':
+            db.session.rollback()
+            flash('This submission is no longer a draft.', 'warning')
+            return redirect(url_for('routes.contribute'))
+
+        residue_count = len(json.loads(submission.residue_data_json))
+        reserved = Submission.query.filter(
+            Submission.proposed_code.isnot(None),
+        ).all()
+
+        submission.proposed_code = generate_peptoid_code(
+            submission,
+            residue_count,
+            Peptoid.query.all(),
+            reserved,
+        )
+        submission.status = 'pending'
+        db.session.commit()
+
+    except (CodeGenerationError, ValueError, TypeError) as error:
+        db.session.rollback()
+        flash(
+            'Could not assign the database code: {}'.format(error),
+            'danger',
+        )
+        return redirect(
+            url_for('routes.submission', submission_id=submission_id)
+        )
+    except (IntegrityError, OperationalError):
+        db.session.rollback()
+        flash(
+            'Another submission is currently reserving a database code. '
+            'Please submit this entry again.',
+            'warning',
+        )
+        return redirect(
+            url_for('routes.submission', submission_id=submission_id)
+        )
+
     flash('Your entry was submitted for review.', 'success')
     return redirect(url_for('routes.contribute'))

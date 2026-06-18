@@ -7,7 +7,7 @@
 <table class="table table-bordered">
   <tr><th>Status</th><td>{{ submission.status|capitalize }}</td></tr>
   <tr><th>Contributor</th><td>{{ submission.contributor.username }} — {{ submission.contributor.institution }}</td></tr>
-  <tr><th>Proposed code</th><td>{{ submission.proposed_code or 'Pending assignment' }}</td></tr>
+  <tr><th>Database code</th><td>{{ submission.finalized_code or submission.proposed_code or 'Assigned automatically when submitted for review' }}</td></tr>
   <tr><th>Title</th><td>{{ submission.title }}</td></tr>
   <tr><th>Release</th><td>{{ submission.release.strftime('%Y-%m-%d') }}</td></tr>
   <tr><th>Experiment</th><td>{{ submission.experiment }}</td></tr>
@@ -47,7 +47,7 @@
 <hr>
 <h2>Review decision</h2>
 <div class="alert alert-warning">
-  Approval creates the finalized public database record and 2D image. Confirm all metadata and the proposed code first.
+  Approval creates the finalized public database record and 2D image. Confirm all metadata before approval. The database code will be generated automatically.
 </div>
 <form method="post" action="{{ url_for('.approve_view', submission_id=submission.id) }}" style="margin-bottom:25px;">
   {{ approve_form.hidden_tag() }}

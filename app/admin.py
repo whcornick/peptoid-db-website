@@ -98,6 +98,7 @@ class SubmissionAdmin(ModelView):
         'pub_doi', 'struct_doi'
     )
     column_default_sort = ('updated_at', True)
+    column_labels = {'proposed_code': 'Database code'}
     column_formatters = {
         'id': lambda view, context, model, name: Markup(
             '<a href="{}">Review #{}</a>'.format(
@@ -116,7 +117,7 @@ class SubmissionAdmin(ModelView):
     )
 
     form_columns = (
-        'proposed_code', 'title', 'release', 'experiment',
+        'title', 'release', 'experiment',
         'pub_doi', 'struct_doi', 'citation', 'authors',
         'sequence', 'rejection_reason'
     )

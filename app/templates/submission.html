@@ -16,7 +16,7 @@
 {% endif %}
 
 <dl class="dl-horizontal">
-  <dt>Proposed code</dt><dd>{{ submission.proposed_code or "Pending assignment" }}</dd>
+  <dt>Database code</dt><dd>{{ submission.finalized_code or submission.proposed_code or "Assigned automatically when submitted for review" }}</dd>
   <dt>Title</dt><dd>{{ submission.title }}</dd>
   <dt>Release date</dt><dd>{{ submission.release.strftime('%Y-%m-%d') }}</dd>
   <dt>Experiment</dt><dd>{{ submission.experiment }}</dd>

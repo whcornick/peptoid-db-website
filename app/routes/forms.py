@@ -49,7 +49,6 @@ class SubmitSubmissionForm(FlaskForm):
 
 
 class ImportPeptoidForm(FlaskForm):
-    code = StringField('Peptoid code', validators=[DataRequired()])
     title = StringField('Title', validators=[DataRequired()])
     release = DateField('Release date', validators=[DataRequired()])
 
@@ -63,7 +62,7 @@ class ImportPeptoidForm(FlaskForm):
         validators=[DataRequired()]
     )
 
-    pub_doi = StringField('Publication DOI', validators=[Optional()])
+    pub_doi = StringField('Publication DOI', validators=[DataRequired()])
     struct_doi = StringField('Structure DOI', validators=[Optional()])
     citation = TextAreaField('Citation', validators=[Optional()])
 
