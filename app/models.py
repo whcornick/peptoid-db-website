@@ -144,3 +144,50 @@ class Contributor(UserMixin, db.Model):
 
     def __repr__(self):
         return '<Contributor {}>'.format(self.username)
+
+
+class Submission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    contributor_id = db.Column(
+        db.Integer, db.ForeignKey('contributor.id'), nullable=False, index=True
+    )
+    status = db.Column(db.String(20), nullable=False, default='draft', index=True)
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.datetime.utcnow
+    )
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow
+    )
+
+    proposed_code = db.Column(db.String(16), nullable=True)
+    finalized_code = db.Column(db.String(16), nullable=True)
+    title = db.Column(db.Text, nullable=False)
+    release = db.Column(db.DateTime, nullable=False)
+    experiment = db.Column(db.Text, nullable=False)
+    pub_doi = db.Column(db.String(64), nullable=True)
+    struct_doi = db.Column(db.String(64), nullable=True)
+    citation = db.Column(db.String(1024), nullable=True)
+    authors = db.Column(db.Text, nullable=False)
+
+    input_type = db.Column(db.String(16), nullable=False)
+    original_smiles = db.Column(db.Text, nullable=True)
+    cleaned_smiles = db.Column(db.Text, nullable=False)
+    topology = db.Column(db.String(1), nullable=False)
+    sequence = db.Column(db.String(1024), nullable=True)
+    residue_data_json = db.Column(db.Text, nullable=False)
+    warnings_json = db.Column(db.Text, nullable=True)
+
+    structure_image_path = db.Column(db.Text, nullable=True)
+    residue_image_path = db.Column(db.Text, nullable=True)
+    staged_cif_path = db.Column(db.Text, nullable=True)
+    original_cif_filename = db.Column(db.Text, nullable=True)
+    rejection_reason = db.Column(db.Text, nullable=True)
+
+    contributor = db.relationship(
+        'Contributor',
+        backref=db.backref('submissions', lazy='dynamic')
+    )
+
+    def __repr__(self):
+        return '<Submission {} {}>'.format(self.id, self.status)
