@@ -1,17 +1,29 @@
 {% extends "base.html" %}
 
 {% block app_content %}
+{% if current_user.is_authenticated %}
 <div class="page-header">
-  <h1>Contribute to the Peptoid DataBank</h1>
-  <p>Researchers may submit peptoid structures and metadata for review by the Kirshenbaum lab at NYU.</p>
+  <h1>Welcome, {{ current_user.first_name }}!</h1>
+  <p>Submit a peptoid entry for review by the Kirshenbaum lab at NYU.</p>
 </div>
 
 <ol>
-  <li>Log in with your contributor account.</li>
   <li>Enter the publication metadata and provide either a CIF file or SMILES.</li>
+  <li>Process the structure.</li>
   <li>Review the automatically generated structure and residue preview.</li>
   <li>Submit the entry!</li>
 </ol>
+
+{% else %}
+<div class="page-header">
+  <h1>Contribute to the Peptoid DataBank</h1>
+  <p>Researchers may submit peptoid structures and metadata for review by the Kirshenbaum lab at NYU.</p>
+  <p>
+    To request a contributor account, contact William Cornick at
+    <a href="mailto:whc4756@nyu.edu">whc4756@nyu.edu</a>.
+  </p>
+</div>
+{% endif %}
 
 {% if current_user.is_authenticated %}
   <div class="alert alert-success">
