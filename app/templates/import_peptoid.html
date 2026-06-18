@@ -28,4 +28,58 @@
 
   {{ form.import_submit(class="btn btn-primary") }}
 </form>
+{% if preview %}
+<hr>
+
+<h2>Structure preview</h2>
+
+<dl class="dl-horizontal">
+  <dt>Input type</dt>
+  <dd>{{ preview.input_type }}</dd>
+
+  <dt>Topology</dt>
+  <dd>{{ preview.topology }}</dd>
+
+  <dt>Residues found</dt>
+  <dd>{{ preview.residue_count }}</dd>
+
+  <dt>Cleaned SMILES</dt>
+  <dd style="overflow-wrap:anywhere;">{{ preview.cleaned_smiles }}</dd>
+</dl>
+
+<h3>Complete structure</h3>
+<img
+  src="data:image/png;base64,{{ preview.structure_image }}"
+  class="img-responsive"
+  alt="Generated peptoid structure"
+>
+
+<h3>Detected residues</h3>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Number</th>
+      <th>Backbone</th>
+      <th>Residue SMILES</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for residue in preview.residues %}
+    <tr>
+      <td>{{ residue.index }}</td>
+      <td>{{ residue.backbone_type }}</td>
+      <td>{{ residue.residue_smiles }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<img
+  src="data:image/png;base64,{{ preview.residue_image }}"
+  class="img-responsive"
+  alt="Generated residue grid"
+>
+{% endif %}
+
 {% endblock %}

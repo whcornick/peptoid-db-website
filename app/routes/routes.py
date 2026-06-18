@@ -1,3 +1,9 @@
+import os
+import tempfile
+
+from werkzeug.utils import secure_filename
+from app.chemistry.processor import process_structure
+
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
 from flask import render_template, redirect, url_for, abort, flash, make_response
 from app.routes.forms import SearchForm, ImportPeptoidForm
@@ -447,15 +453,26 @@ def api():
 @basic_auth.required
 def import_peptoid():
     form = ImportPeptoidForm()
+    preview = None
 
     if form.validate_on_submit():
-        flash(
-            'The form is valid. Structure processing and preview will be added next.',
-            'success'
-        )
+        try:
+            if form.cif_file.data and form.cif_file.data.filename:
+                filename = secure_filename(form.cif_file.data.filename)
+
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    cif_path = os.path.join(temp_dir, filename)
+                    form.cif_file.data.save(cif_path)
+                    preview = process_structure(cif_path=cif_path)
+            else:
+                preview = process_structure(smiles=form.smiles.data)
+
+        except Exception as error:
+            flash(f'Could not process structure: {error}', 'danger')
 
     return render_template(
         'import_peptoid.html',
         title='Import Peptoid',
-        form=form
+        form=form,
+        preview=preview
     )
