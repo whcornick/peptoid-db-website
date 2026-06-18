@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="page-header">
+  <h1>Contribute to the Peptoid DataBank</h1>
+  <p>Researchers may submit peptoid structures and metadata for review by the DataBank team.</p>
+</div>
+
+<ol>
+  <li>Log in with your contributor account.</li>
+  <li>Enter the publication metadata and provide either a CIF file or SMILES.</li>
+  <li>Review the automatically generated structure and residue preview.</li>
+  <li>Submit the entry for review by the Peptoid DataBank team.</li>
+</ol>
+
+{% if current_user.is_authenticated %}
+  <div class="alert alert-success">
+    Logged in as <strong>{{ current_user.username }}</strong>
+    from {{ current_user.institution }}.
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('routes.import_peptoid') }}">Import a peptoid</a>
+  <a class="btn btn-default" href="{{ url_for('routes.contributor_logout') }}">Log out</a>
+{% else %}
+  <a class="btn btn-primary" href="{{ url_for('routes.contributor_login') }}">Contributor login</a>
+{% endif %}
+{% endblock %}

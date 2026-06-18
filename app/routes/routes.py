@@ -1,15 +1,17 @@
 import os
 import tempfile
+import datetime
 
 from werkzeug.utils import secure_filename
 from app.chemistry.processor import process_structure
 
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
 from flask import render_template, redirect, url_for, abort, flash, make_response
-from app.routes.forms import SearchForm, ImportPeptoidForm
-from app.models import Peptoid, Author, Residue
+from flask_login import current_user, login_user, logout_user, login_required
+from app.routes.forms import SearchForm, ImportPeptoidForm, ContributorLoginForm
+from app.models import Peptoid, Author, Residue, Contributor
 from app.routes import bp
-from app import app, basic_auth
+from app import app, db
 from flask import request
 
 # function for creating all gallery views
@@ -449,8 +451,42 @@ def topology(var):
 def api():
     return render_template('api.html', title="PeptoidDB API")
 
+@bp.route('/contribute')
+def contribute():
+    return render_template('contribute.html', title='Contribute')
+
+
+@bp.route('/contributor-login', methods=['GET', 'POST'])
+def contributor_login():
+    if current_user.is_authenticated:
+        return redirect(url_for('routes.contribute'))
+
+    form = ContributorLoginForm()
+    if form.validate_on_submit():
+        contributor = Contributor.query.filter_by(username=form.username.data.strip()).first()
+        if contributor and contributor.is_active and contributor.check_password(form.password.data):
+            login_user(contributor, remember=form.remember.data)
+            contributor.last_login = datetime.datetime.utcnow()
+            db.session.commit()
+            next_page = request.args.get('next')
+            if not next_page or not next_page.startswith('/') or next_page.startswith('//'):
+                next_page = url_for('routes.contribute')
+            return redirect(next_page)
+        flash('Invalid username or password.', 'danger')
+
+    return render_template('contributor_login.html', title='Contributor Login', form=form)
+
+
+@bp.route('/contributor-logout')
+@login_required
+def contributor_logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('routes.contribute'))
+
+
 @bp.route('/import-peptoid', methods=['GET', 'POST'])
-@basic_auth.required
+@login_required
 def import_peptoid():
     form = ImportPeptoidForm()
     preview = None
