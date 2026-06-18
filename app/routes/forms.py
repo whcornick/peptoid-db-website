@@ -75,7 +75,7 @@ class ImportPeptoidForm(FlaskForm):
         ]
     )
 
-    process = SubmitField('Process and preview')
+    import_submit = SubmitField('Process and preview')
 
     def validate(self, extra_validators=None):
         valid = super().validate(extra_validators=extra_validators)

@@ -1,9 +1,9 @@
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
 from flask import render_template, redirect, url_for, abort, flash, make_response
-from app.routes.forms import SearchForm
+from app.routes.forms import SearchForm, ImportPeptoidForm
 from app.models import Peptoid, Author, Residue
 from app.routes import bp
-from app import app
+from app import app, basic_auth
 from flask import request
 
 # function for creating all gallery views
@@ -442,3 +442,20 @@ def topology(var):
 @bp.route('/api', methods=['GET', 'POST'])
 def api():
     return render_template('api.html', title="PeptoidDB API")
+
+@bp.route('/import-peptoid', methods=['GET', 'POST'])
+@basic_auth.required
+def import_peptoid():
+    form = ImportPeptoidForm()
+
+    if form.validate_on_submit():
+        flash(
+            'The form is valid. Structure processing and preview will be added next.',
+            'success'
+        )
+
+    return render_template(
+        'import_peptoid.html',
+        title='Import Peptoid',
+        form=form
+    )
