@@ -80,6 +80,17 @@
   class="img-responsive"
   alt="Generated residue grid"
 >
+
+{% if submission %}
+<hr>
+<div class="alert alert-info">
+  This is draft submission #{{ submission.id }}. It is not yet visible to the public or the review queue.
+</div>
+<form method="post" action="{{ url_for('routes.submit_submission', submission_id=submission.id) }}">
+  {{ submit_form.hidden_tag() }}
+  {{ submit_form.submit(class="btn btn-success btn-lg") }}
+</form>
+{% endif %}
 {% endif %}
 
 {% endblock %}

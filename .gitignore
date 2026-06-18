@@ -13,3 +13,6 @@ app/static/peptoids/
 # backups
 *.bak
 *_backup_*
+
+# private contributor submission staging
+instance/

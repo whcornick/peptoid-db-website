@@ -1,6 +1,8 @@
 import os
 import tempfile
 import datetime
+import base64
+import json
 
 from werkzeug.utils import secure_filename
 from app.chemistry.processor import process_structure
@@ -8,8 +10,8 @@ from app.chemistry.processor import process_structure
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
 from flask import render_template, redirect, url_for, abort, flash, make_response
 from flask_login import current_user, login_user, logout_user, login_required
-from app.routes.forms import SearchForm, ImportPeptoidForm, ContributorLoginForm
-from app.models import Peptoid, Author, Residue, Contributor
+from app.routes.forms import SearchForm, ImportPeptoidForm, ContributorLoginForm, SubmitSubmissionForm
+from app.models import Peptoid, Author, Residue, Contributor, Submission
 from app.routes import bp
 from app import app, db
 from flask import request
@@ -489,26 +491,126 @@ def contributor_logout():
 @login_required
 def import_peptoid():
     form = ImportPeptoidForm()
+    submit_form = SubmitSubmissionForm()
     preview = None
+    submission = None
 
     if form.validate_on_submit():
         try:
+            cif_bytes = None
+            original_cif_filename = None
+
             if form.cif_file.data and form.cif_file.data.filename:
-                filename = secure_filename(form.cif_file.data.filename)
+                original_cif_filename = secure_filename(
+                    form.cif_file.data.filename
+                )
+                cif_bytes = form.cif_file.data.read()
 
                 with tempfile.TemporaryDirectory() as temp_dir:
-                    cif_path = os.path.join(temp_dir, filename)
-                    form.cif_file.data.save(cif_path)
+                    cif_path = os.path.join(
+                        temp_dir, original_cif_filename
+                    )
+                    with open(cif_path, 'wb') as cif_file:
+                        cif_file.write(cif_bytes)
                     preview = process_structure(cif_path=cif_path)
             else:
                 preview = process_structure(smiles=form.smiles.data)
 
+            release_datetime = datetime.datetime.combine(
+                form.release.data, datetime.time.min
+            )
+            submission = Submission(
+                contributor_id=current_user.id,
+                status='draft',
+                proposed_code=form.code.data.strip(),
+                title=form.title.data.strip(),
+                release=release_datetime,
+                experiment=form.experiment.data,
+                pub_doi=(form.pub_doi.data or '').strip() or None,
+                struct_doi=(form.struct_doi.data or '').strip() or None,
+                citation=(form.citation.data or '').strip() or None,
+                authors=form.authors.data.strip(),
+                input_type=preview['input_type'],
+                original_smiles=(
+                    form.smiles.data.strip()
+                    if preview['input_type'] == 'SMILES' else None
+                ),
+                cleaned_smiles=preview['cleaned_smiles'],
+                topology=preview['topology'],
+                residue_data_json=json.dumps(preview['residues']),
+                warnings_json=json.dumps([]),
+                original_cif_filename=original_cif_filename,
+            )
+            db.session.add(submission)
+            db.session.flush()
+
+            staging_dir = os.path.join(
+                app.instance_path,
+                'submission_staging',
+                str(submission.id),
+            )
+            os.makedirs(staging_dir, exist_ok=True)
+
+            structure_path = os.path.join(staging_dir, 'structure.png')
+            residue_path = os.path.join(staging_dir, 'residues.png')
+
+            with open(structure_path, 'wb') as image_file:
+                image_file.write(
+                    base64.b64decode(preview['structure_image'])
+                )
+            with open(residue_path, 'wb') as image_file:
+                image_file.write(
+                    base64.b64decode(preview['residue_image'])
+                )
+
+            submission.structure_image_path = structure_path
+            submission.residue_image_path = residue_path
+
+            if cif_bytes is not None:
+                staged_cif_path = os.path.join(
+                    staging_dir, original_cif_filename
+                )
+                with open(staged_cif_path, 'wb') as cif_file:
+                    cif_file.write(cif_bytes)
+                submission.staged_cif_path = staged_cif_path
+
+            db.session.commit()
+            flash(
+                'Draft saved. Review the preview, then submit it for review.',
+                'success',
+            )
+
         except Exception as error:
+            db.session.rollback()
             flash(f'Could not process structure: {error}', 'danger')
 
     return render_template(
         'import_peptoid.html',
         title='Import Peptoid',
         form=form,
-        preview=preview
+        submit_form=submit_form,
+        preview=preview,
+        submission=submission,
     )
+
+
+@bp.route('/submission/<int:submission_id>/submit', methods=['POST'])
+@login_required
+def submit_submission(submission_id):
+    form = SubmitSubmissionForm()
+    submission = Submission.query.filter_by(
+        id=submission_id,
+        contributor_id=current_user.id,
+    ).first_or_404()
+
+    if not form.validate_on_submit():
+        abort(400)
+
+    if submission.status != 'draft':
+        flash('This submission is no longer a draft.', 'warning')
+        return redirect(url_for('routes.contribute'))
+
+    submission.status = 'pending'
+    db.session.commit()
+    flash('Your entry was submitted for review.', 'success')
+    return redirect(url_for('routes.contribute'))

@@ -44,6 +44,10 @@ class SearchForm(FlaskForm):
         default=''
     )
     submit = SubmitField('Submit')
+class SubmitSubmissionForm(FlaskForm):
+    submit = SubmitField('Submit for review')
+
+
 class ImportPeptoidForm(FlaskForm):
     code = StringField('Peptoid code', validators=[DataRequired()])
     title = StringField('Title', validators=[DataRequired()])
