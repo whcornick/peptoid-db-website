@@ -10,6 +10,7 @@ from wtforms import PasswordField, TextAreaField, SubmitField
 from flask_wtf import FlaskForm
 from wtforms.validators import DataRequired
 from markupsafe import Markup
+from app.services.finalization import finalize_submission, FinalizationError
 import json
 import os
 from wtforms.validators import ValidationError
@@ -64,6 +65,10 @@ class ContributorAdmin(ModelView):
             model.set_password(password)
 
 admin.add_view(ContributorAdmin(Contributor, db.session))
+
+
+class ApproveSubmissionForm(FlaskForm):
+    submit = SubmitField('Approve and publish')
 
 
 class RejectSubmissionForm(FlaskForm):
@@ -126,6 +131,7 @@ class SubmissionAdmin(ModelView):
             submission=submission,
             residues=json.loads(submission.residue_data_json),
             reject_form=RejectSubmissionForm(),
+            approve_form=ApproveSubmissionForm(),
         )
 
     @expose('/review/<int:submission_id>/image/<kind>')
@@ -140,6 +146,30 @@ class SubmissionAdmin(ModelView):
         if not path or not os.path.isfile(path):
             abort(404)
         return send_file(path, mimetype='image/png')
+
+    @expose('/review/<int:submission_id>/approve', methods=['POST'])
+    def approve_view(self, submission_id):
+        submission = db.session.get(Submission, submission_id)
+        if submission is None:
+            abort(404)
+        form = ApproveSubmissionForm()
+        if not form.validate_on_submit():
+            abort(400)
+        try:
+            peptoid, backup_dir = finalize_submission(submission)
+        except FinalizationError as error:
+            flash(str(error), 'danger')
+            return redirect(url_for('.review_view', submission_id=submission.id))
+        except Exception as error:
+            flash('Approval failed and was rolled back: {}'.format(error), 'danger')
+            return redirect(url_for('.review_view', submission_id=submission.id))
+        flash(
+            'Submission approved as {}. Backup: {}'.format(
+                peptoid.code, backup_dir
+            ),
+            'success',
+        )
+        return redirect(url_for('.review_view', submission_id=submission.id))
 
     @expose('/review/<int:submission_id>/reject', methods=['POST'])
     def reject_view(self, submission_id):

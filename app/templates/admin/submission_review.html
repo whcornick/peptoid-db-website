@@ -46,9 +46,14 @@
 {% if submission.status == 'pending' %}
 <hr>
 <h2>Review decision</h2>
-<div class="alert alert-info">
-  Approval will be enabled after safe database and image finalization is implemented.
+<div class="alert alert-warning">
+  Approval creates the finalized public database record and 2D image. Confirm all metadata and the proposed code first.
 </div>
+<form method="post" action="{{ url_for('.approve_view', submission_id=submission.id) }}" style="margin-bottom:25px;">
+  {{ approve_form.hidden_tag() }}
+  {{ approve_form.submit(class="btn btn-success btn-lg") }}
+</form>
+
 <form method="post" action="{{ url_for('.reject_view', submission_id=submission.id) }}">
   {{ reject_form.hidden_tag() }}
   <div class="form-group">
