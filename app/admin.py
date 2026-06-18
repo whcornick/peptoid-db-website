@@ -1,6 +1,6 @@
 from flask_admin import Admin, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
-from app.models import Peptoid, Author, Residue, Contributor
+from app.models import Peptoid, Author, Residue, Contributor, Submission
 from app import app, db, basic_auth
 from flask_admin.contrib.fileadmin import FileAdmin
 import os.path as op
@@ -59,6 +59,42 @@ class ContributorAdmin(ModelView):
             model.set_password(password)
 
 admin.add_view(ContributorAdmin(Contributor, db.session))
+
+
+class SubmissionAdmin(ModelView):
+    can_create = False
+    can_delete = False
+    can_view_details = True
+
+    column_list = (
+        'id', 'contributor', 'status', 'proposed_code',
+        'title', 'experiment', 'topology', 'created_at', 'updated_at'
+    )
+    column_filters = ('status', 'experiment', 'topology', 'created_at')
+    column_searchable_list = (
+        'proposed_code', 'title', 'authors',
+        'pub_doi', 'struct_doi'
+    )
+    column_default_sort = ('updated_at', True)
+
+    column_details_list = (
+        'id', 'contributor', 'status', 'created_at', 'updated_at',
+        'proposed_code', 'finalized_code', 'title', 'release',
+        'experiment', 'pub_doi', 'struct_doi', 'citation', 'authors',
+        'input_type', 'original_smiles', 'cleaned_smiles', 'topology',
+        'sequence', 'residue_data_json', 'warnings_json',
+        'original_cif_filename', 'rejection_reason'
+    )
+
+    form_columns = (
+        'proposed_code', 'title', 'release', 'experiment',
+        'pub_doi', 'struct_doi', 'citation', 'authors',
+        'sequence', 'rejection_reason'
+    )
+
+admin.add_view(
+    SubmissionAdmin(Submission, db.session, name='Submissions')
+)
 
 #Views for image uploads of peptoid structures and residues
 class PeptoidImageAdmin(FileAdmin):
