@@ -692,7 +692,7 @@ def submit_submission(submission_id):
             'danger',
         )
         return redirect(
-            url_for('routes.submission', submission_id=submission_id)
+            url_for('routes.view_submission', submission_id=submission_id)
         )
     except (IntegrityError, OperationalError):
         db.session.rollback()
@@ -702,7 +702,7 @@ def submit_submission(submission_id):
             'warning',
         )
         return redirect(
-            url_for('routes.submission', submission_id=submission_id)
+            url_for('routes.view_submission', submission_id=submission_id)
         )
 
     flash('Your entry was submitted for review.', 'success')
