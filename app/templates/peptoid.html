@@ -16,8 +16,10 @@
 </div>
 <br>
 <div class=container>
-    <img src="{{url_for('static', filename='peptoids/'+code[:5]+'.png')}}" class='img-responsive'
-        style="margin: auto; height:35%">
+    <img src="{{ url_for('static', filename='peptoids/' + code + '_2d.png') }}"
+        onerror="this.onerror=null; this.src='{{ url_for('static', filename='peptoids/' + code[:5] + '.png') }}';"
+        class='img-responsive'
+        style="margin: auto; max-height: 500px;">
 </div>
 <br>
 <div class="card" style='width: 75%;
