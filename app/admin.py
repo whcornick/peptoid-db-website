@@ -184,6 +184,7 @@ class SubmissionAdmin(ModelView):
             flash('Only pending submissions may be rejected.', 'warning')
             return redirect(url_for('.review_view', submission_id=submission.id))
         submission.status = 'rejected'
+        submission.proposed_code = None
         submission.rejection_reason = form.reason.data.strip()
         db.session.commit()
         flash('Submission rejected.', 'success')
