@@ -355,7 +355,10 @@ def residue(var):
         peptoids.extend(r.peptoids)
     codes = [p.code for p in peptoids]
     peptoids = Peptoid.query.filter(Peptoid.code.in_(codes)).order_by(Peptoid.release.desc()).paginate(
-        page, app.config['PEPTOIDS_PER_PAGE'], True)  # querying for peptoids based on list of codes
+        page=page,
+        per_page=app.config['PEPTOIDS_PER_PAGE'],
+        error_out=True
+    )  # querying for peptoids based on list of codes
     next_url = url_for('routes.residue', page=peptoids.next_num,
                        var=var, view=view) if peptoids.has_next else None
     prev_url = url_for('routes.residue', page=peptoids.prev_num,
@@ -390,7 +393,10 @@ def author(var):
     codes = [p.code for p in peptoids]
     title = 'Filtered by Author: ' + var
     peptoids = Peptoid.query.filter(Peptoid.code.in_(codes)).order_by(Peptoid.release.desc()).paginate(
-        page, app.config['PEPTOIDS_PER_PAGE'], True)
+        page=page,
+        per_page=app.config['PEPTOIDS_PER_PAGE'],
+        error_out=True
+    )
     next_url = url_for('routes.author', page=peptoids.next_num,
                        var=var, view=view) if peptoids.has_next else None
     prev_url = url_for('routes.author', page=peptoids.prev_num,
@@ -406,7 +412,11 @@ def experiment(var):
     view = request.args.get('view', '2d', type=str)
     title = 'Filtered by Experiment: ' + var
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).filter_by(
-        experiment=var).paginate(page, app.config['PEPTOIDS_PER_PAGE'], True)
+        experiment=var).paginate(
+        page=page,
+        per_page=app.config['PEPTOIDS_PER_PAGE'],
+        error_out=True
+    )
     if len(peptoids.items) == 0:
         abort(404)
     next_url = url_for('routes.experiment', page=peptoids.next_num,
@@ -425,7 +435,11 @@ def doi(var):
     view = request.args.get('view', '2d', type=str)
     title = 'Filtered by DOI: ' + var
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).filter(
-        (Peptoid.struct_doi == var) | (Peptoid.pub_doi == var)).paginate(page, app.config['PEPTOIDS_PER_PAGE'], True)
+        (Peptoid.struct_doi == var) | (Peptoid.pub_doi == var)).paginate(
+        page=page,
+        per_page=app.config['PEPTOIDS_PER_PAGE'],
+        error_out=True
+    )
     if len(peptoids.items) == 0:
         abort(404)
     var = var.replace('/', '$') #making doi fit url
@@ -444,7 +458,11 @@ def topology(var):
     view = request.args.get('view', '2d', type=str)
     title = 'Filtered by Topology: ' + var
     peptoids = Peptoid.query.order_by(Peptoid.release.desc()).filter_by(
-        topology=var).paginate(page, app.config['PEPTOIDS_PER_PAGE'], True)
+        topology=var).paginate(
+        page=page,
+        per_page=app.config['PEPTOIDS_PER_PAGE'],
+        error_out=True
+    )
     if len(peptoids.items) == 0:
         abort(404)
     next_url = url_for('routes.topology', page=peptoids.next_num,
