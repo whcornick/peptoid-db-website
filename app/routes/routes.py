@@ -5,6 +5,7 @@ import base64
 import json
 
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import RequestEntityTooLarge, TooManyRequests
 from sqlalchemy import text as sql_text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from app.chemistry.processor import process_structure
@@ -19,8 +20,23 @@ from flask_login import current_user, login_user, logout_user, login_required
 from app.routes.forms import SearchForm, ImportPeptoidForm, ContributorLoginForm, SubmitSubmissionForm
 from app.models import Peptoid, Author, Residue, Contributor, Submission
 from app.routes import bp
-from app import app, db
+from app import app, db, limiter
 from flask import request
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_request_entity_too_large(error):
+    flash('The uploaded file or form submission is too large. Please upload a smaller CIF file or shorten the input.', 'danger')
+    return redirect(url_for('routes.import_peptoid'))
+
+
+@app.errorhandler(TooManyRequests)
+def handle_rate_limit(error):
+    if request.path.startswith('/api/') or request.path == '/graphql':
+        return {'error': 'Too many requests. Please wait before trying again.'}, 429
+
+    flash('Too many requests. Please wait a few minutes before trying again.', 'warning')
+    return redirect(url_for('routes.contribute'))
+
 
 # function for creating all gallery views
 
@@ -530,6 +546,7 @@ def submission_image(submission_id, kind):
 
 
 @bp.route('/contributor-login', methods=['GET', 'POST'])
+@limiter.limit('10 per minute')
 def contributor_login():
     if current_user.is_authenticated:
         return redirect(url_for('routes.contribute'))
@@ -560,7 +577,12 @@ def contributor_logout():
 
 @bp.route('/import-peptoid', methods=['GET', 'POST'])
 @login_required
+@limiter.limit('20 per hour')
 def import_peptoid():
+    if not app.config.get('CONTRIBUTIONS_ENABLED', True):
+        flash('New contributor submissions are temporarily paused. Public browsing remains available.', 'warning')
+        return redirect(url_for('routes.contribute'))
+
     form = ImportPeptoidForm()
     submit_form = SubmitSubmissionForm()
     preview = None
@@ -667,11 +689,20 @@ def import_peptoid():
 
 @bp.route('/submission/<int:submission_id>/submit', methods=['POST'])
 @login_required
+@limiter.limit('30 per hour')
 def submit_submission(submission_id):
     form = SubmitSubmissionForm()
 
     if not form.validate_on_submit():
         abort(400)
+
+    if not app.config.get('CONTRIBUTIONS_ENABLED', True):
+        submission = Submission.query.filter_by(
+            id=submission_id,
+            contributor_id=current_user.id,
+        ).first_or_404()
+        flash('New contributor submissions are temporarily paused. This draft has not been submitted for review.', 'warning')
+        return redirect(url_for('routes.view_submission', submission_id=submission.id))
 
     try:
         # Acquire SQLite's write lock before reading existing reservations.

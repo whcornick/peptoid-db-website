@@ -1,3 +1,4 @@
+from flask import current_app
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, SubmitField, RadioField, TextAreaField, SelectField, DateField, PasswordField, BooleanField
@@ -99,5 +100,14 @@ class ImportPeptoidForm(FlaskForm):
             self.smiles.errors.append(message)
             self.cif_file.errors.append(message)
             return False
+
+        if has_smiles:
+            max_smiles_length = current_app.config.get('MAX_SMILES_LENGTH', 10000)
+            smiles_text = self.smiles.data.strip()
+            if len(smiles_text) > max_smiles_length:
+                self.smiles.errors.append(
+                    f'SMILES input is too long. Please limit it to {max_smiles_length} characters.'
+                )
+                return False
 
         return valid
