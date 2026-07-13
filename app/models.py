@@ -199,3 +199,17 @@ class Submission(db.Model):
 
     def __repr__(self):
         return '<Submission {} {}>'.format(self.id, self.status)
+
+class AppSetting(db.Model):
+    key = db.Column(db.String(128), primary_key=True)
+    value = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
+
+    def __repr__(self):
+        return '<AppSetting {}>'.format(self.key)

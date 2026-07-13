@@ -1,0 +1,40 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+{{ super() }}
+
+<h3>Site Controls</h3>
+
+<div class="card mt-4">
+  <div class="card-body">
+    <h4 class="card-title">Contributor submissions</h4>
+
+    {% if contributions_enabled %}
+      <p class="text-success">
+        Contributor submissions are currently enabled.
+      </p>
+    {% else %}
+      <p class="text-danger">
+        Contributor submissions are currently paused.
+      </p>
+    {% endif %}
+
+    <p>
+      Pausing submissions blocks new import processing and prevents drafts from being submitted for review.
+      Public browsing, search, and existing peptoid pages remain available.
+    </p>
+
+    {% if contributions_paused %}
+      <form method="post" action="{{ url_for('site_controls.resume') }}">
+        {{ resume_form.hidden_tag() }}
+        {{ resume_form.submit(class="btn btn-success") }}
+      </form>
+    {% else %}
+      <form method="post" action="{{ url_for('site_controls.pause') }}">
+        {{ pause_form.hidden_tag() }}
+        {{ pause_form.submit(class="btn btn-warning") }}
+      </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

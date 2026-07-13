@@ -1,4 +1,4 @@
-from flask_admin import Admin, AdminIndexView, expose
+from flask_admin import Admin, AdminIndexView, BaseView, expose
 from flask_admin.contrib.sqla import ModelView
 from app.models import Peptoid, Author, Residue, Contributor, Submission
 from app import app, db, basic_auth
@@ -11,6 +11,7 @@ from flask_wtf import FlaskForm
 from wtforms.validators import DataRequired
 from markupsafe import Markup
 from app.services.finalization import finalize_submission, FinalizationError
+from app.services.settings import contributions_are_enabled, contributions_are_paused, set_contributions_paused
 import json
 import os
 from wtforms.validators import ValidationError
@@ -74,6 +75,14 @@ class ApproveSubmissionForm(FlaskForm):
 class RejectSubmissionForm(FlaskForm):
     reason = TextAreaField('Rejection reason', validators=[DataRequired()])
     submit = SubmitField('Reject submission')
+
+
+class PauseContributionsForm(FlaskForm):
+    submit = SubmitField('Pause contributor submissions')
+
+
+class ResumeContributionsForm(FlaskForm):
+    submit = SubmitField('Resume contributor submissions')
 
 
 class SubmissionAdmin(ModelView):
@@ -193,6 +202,48 @@ class SubmissionAdmin(ModelView):
 admin.add_view(
     SubmissionAdmin(Submission, db.session, name='Submissions')
 )
+
+
+class SiteControlsAdmin(BaseView):
+    def is_accessible(self):
+        if not basic_auth.authenticate():
+            raise AuthException('Not authenticated.')
+        return True
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(basic_auth.challenge())
+
+    @expose('/')
+    def index(self):
+        return self.render(
+            'admin/site_controls.html',
+            contributions_enabled=contributions_are_enabled(),
+            contributions_paused=contributions_are_paused(),
+            pause_form=PauseContributionsForm(),
+            resume_form=ResumeContributionsForm(),
+        )
+
+    @expose('/pause', methods=['POST'])
+    def pause(self):
+        form = PauseContributionsForm()
+        if not form.validate_on_submit():
+            abort(400)
+        set_contributions_paused(True)
+        flash('Contributor submissions have been paused. Public browsing remains available.', 'warning')
+        return redirect(url_for('.index'))
+
+    @expose('/resume', methods=['POST'])
+    def resume(self):
+        form = ResumeContributionsForm()
+        if not form.validate_on_submit():
+            abort(400)
+        set_contributions_paused(False)
+        flash('Contributor submissions have been resumed.', 'success')
+        return redirect(url_for('.index'))
+
+
+admin.add_view(SiteControlsAdmin(name='Site Controls', endpoint='site_controls'))
+
 
 #Views for image uploads of peptoid structures and residues
 class PeptoidImageAdmin(FileAdmin):

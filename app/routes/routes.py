@@ -13,6 +13,7 @@ from app.services.code_generation import (
     CodeGenerationError,
     generate_peptoid_code,
 )
+from app.services.settings import contributions_are_enabled
 
 # importing important route-related flask functions, form for searching database, database models, blueprint for routes
 from flask import render_template, redirect, url_for, abort, flash, make_response, send_file
@@ -579,7 +580,7 @@ def contributor_logout():
 @login_required
 @limiter.limit('20 per hour')
 def import_peptoid():
-    if not app.config.get('CONTRIBUTIONS_ENABLED', True):
+    if not contributions_are_enabled():
         flash('New contributor submissions are temporarily paused. Public browsing remains available.', 'warning')
         return redirect(url_for('routes.contribute'))
 
@@ -696,7 +697,7 @@ def submit_submission(submission_id):
     if not form.validate_on_submit():
         abort(400)
 
-    if not app.config.get('CONTRIBUTIONS_ENABLED', True):
+    if not contributions_are_enabled():
         submission = Submission.query.filter_by(
             id=submission_id,
             contributor_id=current_user.id,
