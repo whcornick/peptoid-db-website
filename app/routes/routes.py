@@ -506,6 +506,7 @@ def contribute():
         'contribute.html',
         title='Contribute',
         submissions=submissions,
+        contributions_enabled=contributions_are_enabled(),
     )
 
 

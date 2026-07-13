@@ -4,15 +4,26 @@
 {% if current_user.is_authenticated %}
 <div class="page-header">
   <h1>Welcome, {{ current_user.username }}!</h1>
-  <p>Submit a peptoid entry for review by the Kirshenbaum lab at NYU.</p>
+  {% if contributions_enabled %}
+    <p>Submit a peptoid entry for review by the Kirshenbaum lab at NYU.</p>
+  {% else %}
+    <p>Contributor submissions are temporarily paused. Public browsing remains available.</p>
+  {% endif %}
 </div>
 
+{% if contributions_enabled %}
 <ol>
   <li>Enter the publication metadata and provide either a CIF file or SMILES.</li>
   <li>Process the structure.</li>
   <li>Review the automatically generated structure and residue preview.</li>
   <li>Submit the entry!</li>
 </ol>
+{% else %}
+<div class="alert alert-warning">
+  New submissions are temporarily paused while the site is being maintained or current entries are being reviewed.
+  Existing submissions are still listed below.
+</div>
+{% endif %}
 
 {% else %}
 <div class="page-header">
@@ -30,7 +41,11 @@
     Logged in as <strong>{{ current_user.username }}</strong>
     from {{ current_user.institution }}.
   </div>
-  <a class="btn btn-primary" href="{{ url_for('routes.import_peptoid') }}">Import a peptoid</a>
+  {% if contributions_enabled %}
+    <a class="btn btn-primary" href="{{ url_for('routes.import_peptoid') }}">Import a peptoid</a>
+  {% else %}
+    <button class="btn btn-primary" disabled>Import paused</button>
+  {% endif %}
   <a class="btn btn-default" href="{{ url_for('routes.contributor_logout') }}">Log out</a>
 
   <hr>
