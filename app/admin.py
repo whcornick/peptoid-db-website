@@ -168,11 +168,32 @@ class SubmissionAdmin(ModelView):
         try:
             peptoid, backup_dir = finalize_submission(submission)
         except FinalizationError as error:
+            app.logger.warning(
+                'Admin approval blocked submission_id=%s status=%s proposed_code=%s error=%s',
+                submission.id,
+                submission.status,
+                submission.proposed_code,
+                error,
+            )
             flash(str(error), 'danger')
             return redirect(url_for('.review_view', submission_id=submission.id))
         except Exception as error:
+            app.logger.exception(
+                'Admin approval failed submission_id=%s status=%s proposed_code=%s error=%s',
+                submission.id,
+                submission.status,
+                submission.proposed_code,
+                error,
+            )
             flash('Approval failed and was rolled back: {}'.format(error), 'danger')
             return redirect(url_for('.review_view', submission_id=submission.id))
+        app.logger.info(
+            'Admin approval succeeded submission_id=%s peptoid_id=%s code=%s backup_dir=%s',
+            submission.id,
+            peptoid.id,
+            peptoid.code,
+            backup_dir,
+        )
         flash(
             'Submission approved as {}. Backup: {}'.format(
                 peptoid.code, backup_dir
@@ -192,10 +213,17 @@ class SubmissionAdmin(ModelView):
         if submission.status != 'pending':
             flash('Only pending submissions may be rejected.', 'warning')
             return redirect(url_for('.review_view', submission_id=submission.id))
+        previous_proposed_code = submission.proposed_code
         submission.status = 'rejected'
         submission.proposed_code = None
         submission.rejection_reason = form.reason.data.strip()
         db.session.commit()
+        app.logger.info(
+            'Admin rejected submission submission_id=%s previous_proposed_code=%s reason_length=%s',
+            submission.id,
+            previous_proposed_code,
+            len(submission.rejection_reason or ''),
+        )
         flash('Submission rejected.', 'success')
         return redirect(url_for('.review_view', submission_id=submission.id))
 
@@ -229,6 +257,7 @@ class SiteControlsAdmin(BaseView):
         if not form.validate_on_submit():
             abort(400)
         set_contributions_paused(True)
+        app.logger.warning('Admin paused contributor submissions')
         flash('Contributor submissions have been paused. Public browsing remains available.', 'warning')
         return redirect(url_for('.index'))
 
@@ -238,6 +267,7 @@ class SiteControlsAdmin(BaseView):
         if not form.validate_on_submit():
             abort(400)
         set_contributions_paused(False)
+        app.logger.info('Admin resumed contributor submissions')
         flash('Contributor submissions have been resumed.', 'success')
         return redirect(url_for('.index'))
 

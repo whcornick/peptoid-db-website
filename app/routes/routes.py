@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 import datetime
 import base64
 import json
@@ -591,6 +592,20 @@ def import_peptoid():
     submission = None
 
     if form.validate_on_submit():
+        process_started_at = time.monotonic()
+        input_kind = (
+            'CIF'
+            if form.cif_file.data and form.cif_file.data.filename
+            else 'SMILES'
+        )
+        app.logger.info(
+            'Contributor import processing started contributor_id=%s username=%s input_type=%s pub_doi=%s title=%s',
+            current_user.id,
+            current_user.username,
+            input_kind,
+            (form.pub_doi.data or '').strip(),
+            form.title.data.strip(),
+        )
         try:
             cif_bytes = None
             original_cif_filename = None
@@ -670,6 +685,16 @@ def import_peptoid():
                 submission.staged_cif_path = staged_cif_path
 
             db.session.commit()
+            app.logger.info(
+                'Contributor import processing succeeded contributor_id=%s username=%s submission_id=%s input_type=%s topology=%s residue_count=%s processing_seconds=%.3f',
+                current_user.id,
+                current_user.username,
+                submission.id,
+                preview['input_type'],
+                preview['topology'],
+                len(preview['residues']),
+                time.monotonic() - process_started_at,
+            )
             flash(
                 'Draft saved. Review the preview, then submit it for review.',
                 'success',
@@ -677,6 +702,16 @@ def import_peptoid():
 
         except Exception as error:
             db.session.rollback()
+            app.logger.exception(
+                'Contributor import processing failed contributor_id=%s username=%s input_type=%s pub_doi=%s title=%s processing_seconds=%.3f error=%s',
+                current_user.id,
+                current_user.username,
+                input_kind,
+                (form.pub_doi.data or '').strip(),
+                form.title.data.strip(),
+                time.monotonic() - process_started_at,
+                error,
+            )
             flash(f'Could not process structure: {error}', 'danger')
 
     return render_template(
@@ -735,9 +770,25 @@ def submit_submission(submission_id):
         )
         submission.status = 'pending'
         db.session.commit()
+        app.logger.info(
+            'Contributor submission reserved code contributor_id=%s username=%s submission_id=%s proposed_code=%s residue_count=%s',
+            current_user.id,
+            current_user.username,
+            submission.id,
+            submission.proposed_code,
+            residue_count,
+        )
 
     except (CodeGenerationError, ValueError, TypeError) as error:
         db.session.rollback()
+        app.logger.warning(
+            'Contributor submission code reservation failed contributor_id=%s username=%s submission_id=%s error=%s',
+            current_user.id,
+            current_user.username,
+            submission_id,
+            error,
+            exc_info=True,
+        )
         flash(
             'Could not assign the database code: {}'.format(error),
             'danger',
@@ -745,8 +796,16 @@ def submit_submission(submission_id):
         return redirect(
             url_for('routes.view_submission', submission_id=submission_id)
         )
-    except (IntegrityError, OperationalError):
+    except (IntegrityError, OperationalError) as error:
         db.session.rollback()
+        app.logger.warning(
+            'Contributor submission code reservation concurrency failure contributor_id=%s username=%s submission_id=%s error=%s',
+            current_user.id,
+            current_user.username,
+            submission_id,
+            error,
+            exc_info=True,
+        )
         flash(
             'Another submission is currently reserving a database code. '
             'Please submit this entry again.',
